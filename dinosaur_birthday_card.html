@@ -1,0 +1,1167 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ハッピーバースデー！恐竜3Dカード</title>
+    <!-- Tailwind CSS for UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D Graphics -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Google Fonts for cool Dinosaur-like Japanese Font -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@500&family=Mochi+Yake+One&family=Kosugi+Maru&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: "Kosugi Maru", sans-serif;
+        user-select: none;
+        -webkit-user-select: none;
+        background-color: #0d1b2a;
+      }
+      .dino-font {
+        font-family: "Kiwi Maru", serif;
+        font-weight: 500;
+      }
+      /* アニメーション演出用のスタイル */
+      @keyframes pulse-slow {
+        0%,
+        100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+      .animate-pulse-slow {
+        animation: pulse-slow 3s infinite;
+      }
+    </style>
+  </head>
+  <body
+    class="relative w-full h-screen flex flex-col justify-between items-center text-white"
+  >
+    <!-- 3D Canvas Background -->
+    <div id="canvas-container" class="absolute inset-0 w-full h-full z-0"></div>
+
+    <!-- UI Overlay: Top Header (Birthday Message) -->
+    <div
+      class="relative z-10 w-full max-w-xl px-4 pt-6 text-center pointer-events-none select-none"
+    >
+      <div
+        class="bg-black/40 backdrop-blur-md rounded-2xl p-4 border border-green-500/30 shadow-[0_0_20px_rgba(34,197,94,0.2)]"
+      >
+        <h2 class="text-green-400 text-sm font-bold tracking-widest mb-1">
+          HAPPY 9TH BIRTHDAY!
+        </h2>
+        <h1
+          class="dino-font text-3xl md:text-4xl text-yellow-300 drop-shadow-[0_4px_6px_rgba(0,0,0,0.8)] tracking-wide animate-pulse-slow"
+        >
+          ようちゃん<br />おたんじょうび<br />おめでとう！
+        </h1>
+        <p class="text-xs md:text-sm text-gray-200 mt-2 font-semibold">
+          今日から 9才だね！<br />
+          大好きな 恐竜たちと いっしょに、<br />
+          さいこうに ワクワクする 1年に しようね！
+        </p>
+      </div>
+    </div>
+
+    <!-- UI Overlay: Interactive Buttons (Bottom) -->
+    <div
+      class="relative z-10 w-full max-w-md px-6 pb-14 flex flex-col gap-3 pointer-events-auto"
+    >
+      <!-- 操作ヒント -->
+      <div
+        class="text-center text-xs text-yellow-200/80 bg-black/50 py-1.5 px-3 rounded-full border border-yellow-500/20 backdrop-blur-sm self-center shadow-sm"
+      >
+        💡 がめんをさわって3Dの世界をまわしてみよう！
+      </div>
+
+      <!-- アクションボタンエリア -->
+      <div class="grid grid-cols-3 gap-2">
+        <button
+          id="btn-roar"
+          class="bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 active:scale-95 text-white font-bold py-2 px-2 rounded-xl text-xs md:text-sm shadow-lg border border-red-400/30 transition-all duration-150 flex flex-col items-center justify-center gap-1"
+        >
+          <span class="text-lg">🦖</span>
+          <span>ほえる！</span>
+        </button>
+        <button
+          id="btn-feed"
+          class="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 active:scale-95 text-white font-bold py-2 px-2 rounded-xl text-xs md:text-sm shadow-lg border border-green-400/30 transition-all duration-150 flex flex-col items-center justify-center gap-1"
+        >
+          <span class="text-lg">🍖</span>
+          <span>エサをあげる</span>
+        </button>
+        <button
+          id="btn-jump"
+          class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white font-bold py-2 px-2 rounded-xl text-xs md:text-sm shadow-lg border border-blue-400/30 transition-all duration-150 flex flex-col items-center justify-center gap-1"
+        >
+          <span class="text-lg">🌋</span>
+          <span>大ジャンプ！</span>
+        </button>
+      </div>
+
+      <!-- パーティクル発射！ -->
+      <button
+        id="btn-celebrate"
+        class="w-full bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 hover:brightness-110 active:scale-98 text-white font-black py-3 px-4 rounded-xl text-sm shadow-[0_4px_15px_rgba(234,179,8,0.4)] border border-yellow-300/30 transition-all duration-150 dino-font tracking-wider flex items-center justify-center gap-2"
+      >
+        🎉 お祝いのクラッカーをならす！ 🎉
+      </button>
+    </div>
+
+    <!-- Web Audio & Interaction Notification (Custom modal, no browser alert) -->
+    <div
+      id="welcome-modal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+    >
+      <div
+        class="bg-slate-900 border-2 border-yellow-400 rounded-3xl p-6 max-w-sm w-full text-center shadow-[0_0_30px_rgba(234,179,8,0.3)]"
+      >
+        <span class="text-5xl block mb-4">🦕🎁🦖</span>
+        <h3 class="text-xl text-yellow-300 mb-2 dino-font">
+          ようちゃんのおたんじょうびカード
+        </h3>
+        <p class="text-sm text-gray-300 mb-6 leading-relaxed">
+          おたんじょうびおめでとう！<br />
+          音がでるよ！じゅんびはいいかな？
+        </p>
+        <button
+          id="btn-start"
+          class="w-full bg-gradient-to-r from-yellow-400 to-amber-500 hover:brightness-110 text-slate-950 font-bold py-3 rounded-full text-md shadow-md active:scale-95 transition-all dino-font tracking-wider"
+        >
+          カードをあける！
+        </button>
+      </div>
+    </div>
+
+    <!-- Audio Synthesizer (Web Audio API fallback for sound effects) -->
+    <script>
+      // Web Audio API helper for sound effects (so no external audio files are required)
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      function playRoarSound() {
+        if (audioCtx.state === "suspended") audioCtx.resume();
+
+        // Low growl / roar synth
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(
+          30,
+          audioCtx.currentTime + 1.2,
+        );
+
+        // Distort sound a bit for raw feel
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(300, audioCtx.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(
+          80,
+          audioCtx.currentTime + 1.2,
+        );
+
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioCtx.currentTime + 1.2,
+        );
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 1.2);
+
+        // Add a higher-pitched secondary layer for roar texture
+        const osc2 = audioCtx.createOscillator();
+        const gain2 = audioCtx.createGain();
+        osc2.type = "triangle";
+        osc2.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc2.frequency.exponentialRampToValueAtTime(
+          45,
+          audioCtx.currentTime + 0.8,
+        );
+        gain2.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioCtx.currentTime + 0.8,
+        );
+        osc2.connect(gain2);
+        gain2.connect(audioCtx.destination);
+        osc2.start();
+        osc2.stop(audioCtx.currentTime + 0.8);
+      }
+
+      function playChirpSound() {
+        // Little bird/pterosaur sound
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(
+          1800,
+          audioCtx.currentTime + 0.15,
+        );
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioCtx.currentTime + 0.15,
+        );
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.15);
+      }
+
+      function playCelebrateSound() {
+        // Success / Party pop sound
+        if (audioCtx.state === "suspended") audioCtx.resume();
+
+        // Pop sound
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(
+          600,
+          audioCtx.currentTime + 0.1,
+        );
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(
+          0.01,
+          audioCtx.currentTime + 0.15,
+        );
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.15);
+
+        // Chime / Magic bell layer
+        setTimeout(() => {
+          const freqs = [523.25, 659.25, 783.99, 1046.5]; // C E G C chord
+          freqs.forEach((f, index) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.type = "sine";
+            o.frequency.setValueAtTime(f, audioCtx.currentTime + index * 0.08);
+            g.gain.setValueAtTime(0.15, audioCtx.currentTime + index * 0.08);
+            g.gain.exponentialRampToValueAtTime(
+              0.001,
+              audioCtx.currentTime + index * 0.08 + 0.5,
+            );
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.start(audioCtx.currentTime + index * 0.08);
+            o.stop(audioCtx.currentTime + index * 0.08 + 0.5);
+          });
+        }, 80);
+      }
+
+      function playCrunchSound() {
+        // Eating sound
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        for (let i = 0; i < 3; i++) {
+          setTimeout(() => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(120 - i * 20, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(
+              0.01,
+              audioCtx.currentTime + 0.08,
+            );
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.08);
+          }, i * 120);
+        }
+      }
+    </script>
+
+    <!-- 3D Graphics Engine & Interaction -->
+    <script>
+      let scene, camera, renderer;
+      let tRex, triceratops, pteranodon, volcanicSmoke;
+      let particles = [];
+      let foods = [];
+      let isCelebrating = false;
+
+      // Touch / Mouse Camera rotation state
+      let targetRotationX = 0.2;
+      let targetRotationY = -0.5;
+      let currentRotationX = 0.2;
+      let currentRotationY = -0.5;
+      let isDragging = false;
+      let previousMousePosition = { x: 0, y: 0 };
+
+      // Dinosaur State/Animation helpers
+      let dinoTime = 0;
+      let tRexScale = 1;
+      let triceratopsScale = 1;
+      let pteranodonAngle = 0;
+      let volcanicActivity = 0.1;
+
+      window.onload = function () {
+        init3D();
+        animate();
+
+        // Set up Modal trigger to allow AudioContext to play safely
+        document.getElementById("btn-start").addEventListener("click", () => {
+          document.getElementById("welcome-modal").classList.add("hidden");
+          if (audioCtx.state === "suspended") {
+            audioCtx.resume();
+          }
+          playCelebrateSound();
+          triggerCelebration();
+        });
+
+        // UI Actions
+        document.getElementById("btn-roar").addEventListener("click", () => {
+          playRoarSound();
+          triggerRoarAction();
+        });
+
+        document.getElementById("btn-feed").addEventListener("click", () => {
+          playCrunchSound();
+          spawnMeat();
+        });
+
+        document.getElementById("btn-jump").addEventListener("click", () => {
+          playRoarSound();
+          triggerJumpAction();
+        });
+
+        document
+          .getElementById("btn-celebrate")
+          .addEventListener("click", () => {
+            playCelebrateSound();
+            triggerCelebration();
+          });
+      };
+
+      function init3D() {
+        const container = document.getElementById("canvas-container");
+
+        // Create Scene
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a141d); // Dark primeval night sky
+        scene.fog = new THREE.FogExp2(0x0a141d, 0.035);
+
+        // Create Camera
+        camera = new THREE.PerspectiveCamera(
+          60,
+          container.clientWidth / container.clientHeight,
+          0.1,
+          1000,
+        );
+        camera.position.set(0, 5, 14);
+
+        // Create Renderer
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
+
+        // Warm jungle/sunset light
+        const dirLight = new THREE.DirectionalLight(0xff7b00, 1.2);
+        dirLight.position.set(10, 18, 10);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 1024;
+        dirLight.shadow.mapSize.height = 1024;
+        scene.add(dirLight);
+
+        // Cool night moonlight fill
+        const fillLight = new THREE.DirectionalLight(0x00a8ff, 0.6);
+        fillLight.position.set(-10, 8, -10);
+        scene.add(fillLight);
+
+        // Base Ground (Prehistoric terrain)
+        createTerrain();
+
+        // Volcano in background
+        createVolcano();
+
+        // Build 3D Toy Dinosaurs using Basic Geometries for optimal, guaranteed rendering
+        createTRex();
+        createTriceratops();
+        createPteranodon();
+
+        // Prehistoric Trees
+        createTree(-6, -2);
+        createTree(6, -4);
+        createTree(-4, -6);
+
+        // Event Listeners for Resize and Interactions
+        window.addEventListener("resize", onWindowResize);
+        setupInteractions(container);
+      }
+
+      // --- PREHISTORIC WORLD DESIGN BUILDERS ---
+
+      function createTerrain() {
+        // Ground Mesh
+        const groundGeo = new THREE.PlaneGeometry(60, 60, 20, 20);
+
+        // Add slight unevenness to terrain vertices
+        const pos = groundGeo.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+          const vx = pos.getX(i);
+          const vy = pos.getY(i);
+          // Noise-like math to make ground look natural
+          const z =
+            Math.sin(vx * 0.2) * Math.cos(vy * 0.2) * 0.6 +
+            Math.sin(vx * 0.05) * 1.5;
+          pos.setZ(i, z);
+        }
+        groundGeo.computeVertexNormals();
+
+        const groundMat = new THREE.MeshStandardMaterial({
+          color: 0x1d3a22, // Dark jungle moss green
+          roughness: 0.9,
+          metalness: 0.1,
+          flatShading: true,
+        });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+      }
+
+      function createVolcano() {
+        const volcanoGroup = new THREE.Group();
+        volcanoGroup.position.set(0, -2, -22);
+
+        // Mountain Cone
+        const coneGeo = new THREE.ConeGeometry(8, 12, 10, 4, true);
+        const coneMat = new THREE.MeshStandardMaterial({
+          color: 0x2b2d42,
+          roughness: 0.9,
+          flatShading: true,
+        });
+        const mountain = new THREE.Mesh(coneGeo, coneMat);
+        mountain.position.y = 6;
+        volcanoGroup.add(mountain);
+
+        // Lava top rim
+        const lavaGeo = new THREE.CylinderGeometry(1.5, 2, 0.4, 8);
+        const lavaMat = new THREE.MeshBasicMaterial({ color: 0xff3c00 });
+        const lavaTop = new THREE.Mesh(lavaGeo, lavaMat);
+        lavaTop.position.y = 12;
+        volcanoGroup.add(lavaTop);
+
+        scene.add(volcanoGroup);
+
+        // Volcanic Smoke particles setup
+        volcanicSmoke = new THREE.Group();
+        volcanicSmoke.position.set(0, 10, -22);
+        scene.add(volcanicSmoke);
+
+        for (let i = 0; i < 20; i++) {
+          const size = 0.5 + Math.random() * 1.5;
+          const cloudGeo = new THREE.DodecahedronGeometry(size);
+          const cloudMat = new THREE.MeshStandardMaterial({
+            color: 0x4a4e69,
+            transparent: true,
+            opacity: 0.4 + Math.random() * 0.4,
+            flatShading: true,
+          });
+          const cloud = new THREE.Mesh(cloudGeo, cloudMat);
+          resetVolcanoSmokeParticle(cloud);
+          volcanicSmoke.add(cloud);
+        }
+      }
+
+      function resetVolcanoSmokeParticle(p) {
+        p.position.set(
+          (Math.random() - 0.5) * 1.5,
+          Math.random() * 2,
+          (Math.random() - 0.5) * 1.5,
+        );
+        p.scale.set(1, 1, 1);
+      }
+
+      function createTree(x, z) {
+        const treeGroup = new THREE.Group();
+        treeGroup.position.set(x, -2, z);
+
+        // Trunk
+        const trunkGeo = new THREE.CylinderGeometry(0.3, 0.5, 4, 5);
+        const trunkMat = new THREE.MeshStandardMaterial({
+          color: 0x4a3b32,
+          flatShading: true,
+        });
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+        trunk.position.y = 2;
+        trunk.castShadow = true;
+        treeGroup.add(trunk);
+
+        // Prehistoric Fern Canopy
+        const leafColors = [0x2d6a4f, 0x1b4332, 0x40916c];
+        for (let i = 0; i < 3; i++) {
+          const size = 1.8 - i * 0.4;
+          const leavesGeo = new THREE.ConeGeometry(size, 2.5, 6);
+          const leavesMat = new THREE.MeshStandardMaterial({
+            color: leafColors[i],
+            flatShading: true,
+            roughness: 0.8,
+          });
+          const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+          leaves.position.y = 3.5 + i * 1.2;
+          leaves.castShadow = true;
+          treeGroup.add(leaves);
+        }
+
+        scene.add(treeGroup);
+      }
+
+      // --- DINOSAUR 3D MODEL BUILDERS ---
+
+      // Red Tyrannosaurus Rex (T-Rex)
+      function createTRex() {
+        tRex = new THREE.Group();
+        tRex.position.set(-2, -1, 1);
+        tRex.rotation.y = 0.5;
+
+        // Material
+        const dinoMat = new THREE.MeshStandardMaterial({
+          color: 0xc1121f, // Bright Toy Red T-Rex
+          roughness: 0.7,
+          flatShading: true,
+        });
+        const bellyMat = new THREE.MeshStandardMaterial({
+          color: 0xfdf0d5, // Pale tan belly
+          roughness: 0.7,
+          flatShading: true,
+        });
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+        // Body
+        const body = new THREE.Mesh(
+          new THREE.BoxGeometry(1.6, 2, 2.2),
+          dinoMat,
+        );
+        body.position.y = 1.2;
+        body.castShadow = true;
+        tRex.add(body);
+
+        // Belly plate
+        const belly = new THREE.Mesh(
+          new THREE.BoxGeometry(1.2, 1.4, 0.2),
+          bellyMat,
+        );
+        belly.position.set(0, 1.1, 1.05);
+        tRex.add(belly);
+
+        // Head (Big heavy T-Rex jaw)
+        const headGroup = new THREE.Group();
+        headGroup.name = "head";
+        headGroup.position.set(0, 2.3, 0.7);
+
+        const mainHead = new THREE.Mesh(
+          new THREE.BoxGeometry(1.4, 1.3, 1.8),
+          dinoMat,
+        );
+        mainHead.position.set(0, 0, 0);
+        mainHead.castShadow = true;
+        headGroup.add(mainHead);
+
+        // Jaw bottom
+        const lowerJaw = new THREE.Mesh(
+          new THREE.BoxGeometry(1.3, 0.5, 1.6),
+          dinoMat,
+        );
+        lowerJaw.name = "lowerJaw";
+        lowerJaw.position.set(0, -0.6, 0.1);
+        headGroup.add(lowerJaw);
+
+        // Teeth
+        const toothGeo = new THREE.ConeGeometry(0.08, 0.2, 4);
+        for (let i = 0; i < 4; i++) {
+          const tooth = new THREE.Mesh(toothGeo, whiteMat);
+          tooth.rotation.x = Math.PI;
+          tooth.position.set(-0.5 + i * 0.33, -0.4, 0.8);
+          headGroup.add(tooth);
+        }
+
+        // Eyes
+        const eyeL = new THREE.Mesh(
+          new THREE.BoxGeometry(0.2, 0.2, 0.2),
+          eyeMat,
+        );
+        eyeL.position.set(0.75, 0.3, 0.4);
+        const eyeR = new THREE.Mesh(
+          new THREE.BoxGeometry(0.2, 0.2, 0.2),
+          eyeMat,
+        );
+        eyeR.position.set(-0.75, 0.3, 0.4);
+        headGroup.add(eyeL);
+        headGroup.add(eyeR);
+
+        tRex.add(headGroup);
+
+        // Tail
+        const tailGroup = new THREE.Group();
+        tailGroup.name = "tail";
+        tailGroup.position.set(0, 1.2, -1);
+        const tail1 = new THREE.Mesh(
+          new THREE.BoxGeometry(1.1, 1, 1.5),
+          dinoMat,
+        );
+        tail1.position.set(0, -0.1, -0.5);
+        tailGroup.add(tail1);
+        tRex.add(tailGroup);
+
+        // Little Baby T-Rex arms
+        const armL = new THREE.Mesh(
+          new THREE.BoxGeometry(0.3, 0.6, 0.3),
+          dinoMat,
+        );
+        armL.position.set(0.95, 1.4, 1);
+        armL.rotation.x = 0.5;
+        const armR = new THREE.Mesh(
+          new THREE.BoxGeometry(0.3, 0.6, 0.3),
+          dinoMat,
+        );
+        armR.position.set(-0.95, 1.4, 1);
+        armR.rotation.x = 0.5;
+        tRex.add(armL);
+        tRex.add(armR);
+
+        // Big Strong T-Rex legs
+        const legL = new THREE.Mesh(
+          new THREE.BoxGeometry(0.5, 1.3, 0.8),
+          dinoMat,
+        );
+        legL.name = "legL";
+        legL.position.set(0.9, 0.2, 0);
+        legL.castShadow = true;
+        const legR = new THREE.Mesh(
+          new THREE.BoxGeometry(0.5, 1.3, 0.8),
+          dinoMat,
+        );
+        legR.name = "legR";
+        legR.position.set(-0.9, 0.2, 0);
+        legR.castShadow = true;
+        tRex.add(legL);
+        tRex.add(legR);
+
+        scene.add(tRex);
+      }
+
+      // Green Triceratops (Horned Dinosaur)
+      function createTriceratops() {
+        triceratops = new THREE.Group();
+        triceratops.position.set(3, -1.2, 2.5);
+        triceratops.rotation.y = -0.6;
+
+        const bodyMat = new THREE.MeshStandardMaterial({
+          color: 0x38b000,
+          flatShading: true,
+        }); // Bright green
+        const hornMat = new THREE.MeshStandardMaterial({
+          color: 0xfdf0d5,
+          flatShading: true,
+        }); // Tan horn
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+        // Main Body (low sturdy box)
+        const body = new THREE.Mesh(
+          new THREE.BoxGeometry(1.6, 1.5, 2.6),
+          bodyMat,
+        );
+        body.position.y = 0.8;
+        body.castShadow = true;
+        triceratops.add(body);
+
+        // Head Shield / Frill (Signature Triceratops feature)
+        const shield = new THREE.Mesh(
+          new THREE.BoxGeometry(2.6, 2.4, 0.4),
+          bodyMat,
+        );
+        shield.position.set(0, 1.8, 0.8);
+        shield.rotation.x = -0.4;
+        shield.castShadow = true;
+        triceratops.add(shield);
+
+        // Spikes on the Shield
+        const spikeGeo = new THREE.ConeGeometry(0.12, 0.3, 4);
+        for (let i = 0; i < 5; i++) {
+          const spike = new THREE.Mesh(spikeGeo, hornMat);
+          spike.rotation.z = Math.PI / 2;
+          spike.rotation.x = -Math.PI / 2;
+          spike.position.set(
+            -1.2 + i * 0.6,
+            1.8 + Math.sin(i * 0.6) * 0.6,
+            0.9,
+          );
+          triceratops.add(spike);
+        }
+
+        // Head Snout
+        const head = new THREE.Mesh(
+          new THREE.BoxGeometry(1.1, 1, 1.4),
+          bodyMat,
+        );
+        head.position.set(0, 1.1, 1.6);
+        triceratops.add(head);
+
+        // Three Horns
+        const smallHorn = new THREE.Mesh(
+          new THREE.ConeGeometry(0.1, 0.5, 4),
+          hornMat,
+        );
+        smallHorn.position.set(0, 1.5, 2.1);
+        smallHorn.rotation.x = 0.5;
+        triceratops.add(smallHorn);
+
+        const hornL = new THREE.Mesh(
+          new THREE.ConeGeometry(0.15, 1, 4),
+          hornMat,
+        );
+        hornL.position.set(0.4, 1.8, 1.7);
+        hornL.rotation.x = 0.8;
+        triceratops.add(hornL);
+
+        const hornR = new THREE.Mesh(
+          new THREE.ConeGeometry(0.15, 1, 4),
+          hornMat,
+        );
+        hornR.position.set(-0.4, 1.8, 1.7);
+        hornR.rotation.x = 0.8;
+        triceratops.add(hornR);
+
+        // Eyes
+        const eyeL = new THREE.Mesh(
+          new THREE.BoxGeometry(0.15, 0.15, 0.15),
+          eyeMat,
+        );
+        eyeL.position.set(0.6, 1.2, 1.8);
+        const eyeR = new THREE.Mesh(
+          new THREE.BoxGeometry(0.15, 0.15, 0.15),
+          eyeMat,
+        );
+        eyeR.position.set(-0.6, 1.2, 1.8);
+        triceratops.add(eyeL);
+        triceratops.add(eyeR);
+
+        // Tail
+        const tail = new THREE.Mesh(
+          new THREE.BoxGeometry(0.6, 0.4, 1.2),
+          bodyMat,
+        );
+        tail.position.set(0, 0.7, -1.6);
+        tail.rotation.x = -0.4;
+        triceratops.add(tail);
+
+        // Sturdy legs
+        const legGeo = new THREE.BoxGeometry(0.45, 0.8, 0.45);
+        const legLF = new THREE.Mesh(legGeo, bodyMat);
+        legLF.position.set(0.7, 0.4, 0.9);
+        const legRF = new THREE.Mesh(legGeo, bodyMat);
+        legRF.position.set(-0.7, 0.4, 0.9);
+        const legLB = new THREE.Mesh(legGeo, bodyMat);
+        legLB.position.set(0.7, 0.4, -0.9);
+        const legRB = new THREE.Mesh(legGeo, bodyMat);
+        legRB.position.set(-0.7, 0.4, -0.9);
+
+        triceratops.add(legLF);
+        triceratops.add(legRF);
+        triceratops.add(legLB);
+        triceratops.add(legRB);
+
+        scene.add(triceratops);
+      }
+
+      // Flying Blue Pteranodon (Pterodactyl)
+      function createPteranodon() {
+        pteranodon = new THREE.Group();
+        pteranodon.position.set(0, 5, 0);
+
+        const wingMat = new THREE.MeshStandardMaterial({
+          color: 0x0077b6,
+          flatShading: true,
+        }); // Blue
+        const bodyMat = new THREE.MeshStandardMaterial({
+          color: 0x0096c7,
+          flatShading: true,
+        }); // Light Blue
+        const beakMat = new THREE.MeshStandardMaterial({
+          color: 0xffb703,
+          flatShading: true,
+        }); // Yellow beak
+
+        // Tiny central body
+        const body = new THREE.Mesh(
+          new THREE.BoxGeometry(0.5, 0.4, 1.2),
+          bodyMat,
+        );
+        body.castShadow = true;
+        pteranodon.add(body);
+
+        // Head and big beak
+        const head = new THREE.Group();
+        head.position.set(0, 0.2, 0.5);
+        const skull = new THREE.Mesh(
+          new THREE.BoxGeometry(0.4, 0.4, 0.6),
+          bodyMat,
+        );
+        head.add(skull);
+
+        // Crest on back of head
+        const crest = new THREE.Mesh(
+          new THREE.ConeGeometry(0.15, 0.8, 4),
+          bodyMat,
+        );
+        crest.position.set(0, 0.2, -0.4);
+        crest.rotation.x = -1.2;
+        head.add(crest);
+
+        // Giant beak
+        const beak = new THREE.Mesh(
+          new THREE.ConeGeometry(0.2, 1.2, 4),
+          beakMat,
+        );
+        beak.position.set(0, -0.1, 0.8);
+        beak.rotation.x = Math.PI / 2;
+        head.add(beak);
+        pteranodon.add(head);
+
+        // Wings (Split into Left and Right so we can flap them)
+        const wingL = new THREE.Group();
+        wingL.name = "wingL";
+        wingL.position.set(0.25, 0, 0);
+        const wingSegmentL = new THREE.Mesh(
+          new THREE.BoxGeometry(2.2, 0.05, 1.0),
+          wingMat,
+        );
+        wingSegmentL.position.x = 1.1; // pivot offset
+        wingL.add(wingSegmentL);
+        pteranodon.add(wingL);
+
+        const wingR = new THREE.Group();
+        wingR.name = "wingR";
+        wingR.position.set(-0.25, 0, 0);
+        const wingSegmentR = new THREE.Mesh(
+          new THREE.BoxGeometry(2.2, 0.05, 1.0),
+          wingMat,
+        );
+        wingSegmentR.position.x = -1.1; // pivot offset
+        wingR.add(wingSegmentR);
+        pteranodon.add(wingR);
+
+        scene.add(pteranodon);
+      }
+
+      // --- INTERACTIVE ACTIONS & ANICATIONS ---
+
+      function triggerRoarAction() {
+        // T-Rex head opens wide and roars
+        const head = tRex.getObjectByName("head");
+        const lowerJaw = tRex.getObjectByName("lowerJaw");
+        if (head && lowerJaw) {
+          // Quick open/close animation via GSAP-like manual timer in loop
+          tRexScale = 1.4; // inflate slightly on roar
+          head.rotation.x = -0.4;
+          lowerJaw.rotation.x = 0.5;
+          setTimeout(() => {
+            head.rotation.x = 0;
+            lowerJaw.rotation.x = 0;
+            tRexScale = 1.0;
+          }, 800);
+        }
+        // Trigger volcanic rumbling spike!
+        volcanicActivity = 0.8;
+        setTimeout(() => {
+          volcanicActivity = 0.1;
+        }, 2000);
+      }
+
+      function triggerJumpAction() {
+        // High jump for Triceratops
+        let t = 0;
+        const originY = -1.2;
+        const jumpInterval = setInterval(() => {
+          t += 0.08;
+          if (t >= Math.PI) {
+            triceratops.position.y = originY;
+            clearInterval(jumpInterval);
+          } else {
+            triceratops.position.y = originY + Math.sin(t) * 3;
+            triceratops.rotation.x = Math.sin(t * 2) * 0.2;
+          }
+        }, 16);
+      }
+
+      function spawnMeat() {
+        // Spawn delicious blocky bone meat falling from sky for T-Rex!
+        const meatGroup = new THREE.Group();
+        meatGroup.position.set(-2 + (Math.random() - 0.5) * 1.5, 10, 1.5);
+
+        const boneMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+        const meatMat = new THREE.MeshStandardMaterial({
+          color: 0x9e2a2b,
+          flatShading: true,
+        });
+
+        // Meat chunk
+        const chunk = new THREE.Mesh(
+          new THREE.BoxGeometry(0.8, 0.6, 0.6),
+          meatMat,
+        );
+        meatGroup.add(chunk);
+
+        // Bone white ends
+        const bone = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.12, 0.12, 1.4),
+          boneMat,
+        );
+        bone.rotation.z = Math.PI / 2;
+        meatGroup.add(bone);
+
+        scene.add(meatGroup);
+        foods.push(meatGroup);
+      }
+
+      function triggerCelebration() {
+        isCelebrating = true;
+        const colors = [
+          0xff0055, 0x00ffcc, 0xffcc00, 0xff3399, 0x33ff33, 0x0099ff,
+        ];
+
+        // Spawn colourful confetti/star particles
+        for (let i = 0; i < 120; i++) {
+          const size = 0.15 + Math.random() * 0.25;
+          const particleGeo =
+            Math.random() > 0.5
+              ? new THREE.BoxGeometry(size, size, size)
+              : new THREE.DodecahedronGeometry(size);
+
+          const pMat = new THREE.MeshStandardMaterial({
+            color: colors[Math.floor(Math.random() * colors.length)],
+            roughness: 0.3,
+            metalness: 0.8,
+            flatShading: true,
+          });
+
+          const p = new THREE.Mesh(particleGeo, pMat);
+          // Spread out from central screen point
+          p.position.set(0, 1, 3);
+
+          p.velocity = new THREE.Vector3(
+            (Math.random() - 0.5) * 8,
+            8 + Math.random() * 8,
+            (Math.random() - 0.5) * 8,
+          );
+          p.rotationSpeed = new THREE.Vector3(
+            Math.random() * 0.1,
+            Math.random() * 0.1,
+            Math.random() * 0.1,
+          );
+
+          scene.add(p);
+          particles.push(p);
+        }
+
+        setTimeout(() => {
+          isCelebrating = false;
+        }, 5000);
+      }
+
+      // --- CONTROL INPUTS AND INTERACTION HANDLING ---
+
+      function setupInteractions(element) {
+        // Handle both touch & mouse gestures safely
+        function startDrag(e) {
+          isDragging = true;
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          previousMousePosition = { x: clientX, y: clientY };
+        }
+
+        function moveDrag(e) {
+          if (!isDragging) return;
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+          const deltaX = clientX - previousMousePosition.x;
+          const deltaY = clientY - previousMousePosition.y;
+
+          targetRotationY += deltaX * 0.007;
+          targetRotationX = Math.max(
+            -0.2,
+            Math.min(0.8, targetRotationX + deltaY * 0.007),
+          );
+
+          previousMousePosition = { x: clientX, y: clientY };
+        }
+
+        function endDrag() {
+          isDragging = false;
+        }
+
+        element.addEventListener("mousedown", startDrag);
+        element.addEventListener("mousemove", moveDrag);
+        window.addEventListener("mouseup", endDrag);
+
+        element.addEventListener("touchstart", startDrag, { passive: true });
+        element.addEventListener("touchmove", moveDrag, { passive: true });
+        window.addEventListener("touchend", endDrag);
+      }
+
+      function onWindowResize() {
+        const container = document.getElementById("canvas-container");
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      }
+
+      // --- MAIN GAME LOOP / ANIMATION ---
+
+      function animate() {
+        requestAnimationFrame(animate);
+        dinoTime += 0.02;
+
+        // 1. Gently Rotate Camera Scene based on User drag or slow auto-spin
+        if (!isDragging) {
+          // Auto-drift idle spin
+          targetRotationY += 0.001;
+        }
+        currentRotationX += (targetRotationX - currentRotationX) * 0.1;
+        currentRotationY += (targetRotationY - currentRotationY) * 0.1;
+
+        // Map rotation around target dino focal area
+        camera.position.x =
+          Math.sin(currentRotationY) * Math.cos(currentRotationX) * 14;
+        camera.position.y = Math.sin(currentRotationX) * 14 + 4;
+        camera.position.z =
+          Math.cos(currentRotationY) * Math.cos(currentRotationX) * 14;
+        camera.lookAt(new THREE.Vector3(0, 1.5, 0.5));
+
+        // 2. Animate Tyrannosaurus Rex (Breathing/idle stomp)
+        if (tRex) {
+          // Breathe idle
+          const scaleTarget = tRexScale * (1 + Math.sin(dinoTime * 2) * 0.02);
+          tRex.scale.set(scaleTarget, scaleTarget, scaleTarget);
+
+          // Idle tail sway
+          const tail = tRex.getObjectByName("tail");
+          if (tail) {
+            tail.rotation.y = Math.sin(dinoTime * 3) * 0.15;
+          }
+
+          // Idle leg marching swing
+          const legL = tRex.getObjectByName("legL");
+          const legR = tRex.getObjectByName("legR");
+          if (legL && legR) {
+            legL.rotation.x = Math.sin(dinoTime * 2.5) * 0.1;
+            legR.rotation.x = -Math.sin(dinoTime * 2.5) * 0.1;
+          }
+        }
+
+        // 3. Animate Triceratops (Gentle horn-shaking)
+        if (triceratops) {
+          triceratops.rotation.y = -0.6 + Math.sin(dinoTime * 1.5) * 0.08;
+        }
+
+        // 4. Animate Flying Pteranodon (Flying circles above landscape)
+        if (pteranodon) {
+          pteranodonAngle += 0.015;
+          pteranodon.position.x = Math.sin(pteranodonAngle) * 7;
+          pteranodon.position.z = Math.cos(pteranodonAngle) * 7;
+          pteranodon.position.y = 5.5 + Math.sin(dinoTime * 4) * 0.4;
+          pteranodon.lookAt(
+            new THREE.Vector3(
+              Math.sin(pteranodonAngle + 0.1) * 7,
+              pteranodon.position.y,
+              Math.cos(pteranodonAngle + 0.1) * 7,
+            ),
+          );
+
+          // Flap Wings!
+          const wingL = pteranodon.getObjectByName("wingL");
+          const wingR = pteranodon.getObjectByName("wingR");
+          if (wingL && wingR) {
+            wingL.rotation.z = Math.sin(dinoTime * 8) * 0.5;
+            wingR.rotation.z = -Math.sin(dinoTime * 8) * 0.5;
+          }
+
+          // Occasional pterodactyl chirp
+          if (Math.random() < 0.003) {
+            playChirpSound();
+          }
+        }
+
+        // 5. Volcanic Smoke Cloud animation
+        if (volcanicSmoke) {
+          volcanicSmoke.children.forEach((cloud) => {
+            cloud.position.y += 0.04 + volcanicActivity * 0.08;
+            cloud.position.x += Math.sin(dinoTime + cloud.position.y) * 0.01;
+            cloud.scale.multiplyScalar(1.008);
+
+            // Rise and vanish
+            if (cloud.position.y > 10) {
+              resetVolcanoSmokeParticle(cloud);
+            }
+          });
+        }
+
+        // 6. Food Falling Physics
+        for (let i = foods.length - 1; i >= 0; i--) {
+          const meat = foods[i];
+          meat.position.y -= 0.15;
+          meat.rotation.x += 0.03;
+          meat.rotation.y += 0.02;
+
+          // Collision with Ground
+          if (meat.position.y <= -1.1) {
+            // Explode slightly or disappear
+            scene.remove(meat);
+            foods.splice(i, 1);
+
+            // Trigger T-Rex happy bite reaction
+            triggerRoarAction();
+          }
+        }
+
+        // 7. Confetti Particle Physics
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+
+          // Apply Gravity and update positions
+          p.velocity.y -= 0.25; // gravity
+          p.position.addScaledVector(p.velocity, 0.05);
+          p.rotation.x += p.rotationSpeed.x;
+          p.rotation.y += p.rotationSpeed.y;
+          p.rotation.z += p.rotationSpeed.z;
+
+          // Bounce or vanish near ground
+          if (p.position.y < -2) {
+            scene.remove(p);
+            particles.splice(i, 1);
+          }
+        }
+
+        renderer.render(scene, camera);
+      }
+    </script>
+  </body>
+</html>
